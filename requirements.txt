@@ -1,0 +1,50 @@
+# ==============================================================================
+# Adit-Agent — Python dependencies
+# Target runtime: Python 3.11+
+# Pins use compatible-release (~=) to allow patch/minor security updates while
+# protecting against breaking major bumps. Re-lock with `pip-compile` for prod.
+# ==============================================================================
+
+# ---- Telegram bot framework -------------------------------------------------
+# v20.x is fully async (asyncio) and ships with rate-limiter + job-queue extras.
+python-telegram-bot>=22.0
+
+# ---- Configuration & validation ---------------------------------------------
+pydantic~=2.9            # v2 core (Rust-backed validation)
+pydantic-settings~=2.6   # typed settings loaded from .env / environment
+
+# ---- Database (async SQLAlchemy 2.0 + SQLite driver) ------------------------
+SQLAlchemy[asyncio]~=2.0
+aiosqlite~=0.20          # async SQLite driver used by SQLAlchemy
+alembic~=1.13            # schema migrations (used by app/database/migrations.py)
+greenlet~=3.1            # required by SQLAlchemy async bridge
+
+# ---- LLM provider HTTP clients ----------------------------------------------
+httpx~=0.27              # async HTTP client for custom providers
+openai~=1.54             # OpenAI-compatible client (function-calling schema)
+tenacity~=9.0            # retry/backoff for provider fallback logic
+
+# ---- Vector store & embeddings ----------------------------------------------
+chromadb~=0.5            # persistent local vector store
+tiktoken~=0.8            # tokenizer / token counting (app/agent/context_builder.py :: TokenCounter)
+
+# ---- Multimodal: documents, images, audio, video ----------------------------
+pillow~=11.0             # image loading / preprocessing
+pypdf~=5.1               # PDF text extraction
+python-docx~=1.1         # DOCX parsing
+# NOTE: ffmpeg must be installed at the OS level for audio/video pipelines.
+# TODO: add `faster-whisper` or a hosted STT provider for audio transcription.
+
+# ---- Web tools --------------------------------------------------------------
+beautifulsoup4~=4.12     # HTML parsing for scraper tool
+# lxml intentionally omitted — scrapers use bs4's built-in html.parser (no C ext needed).
+# TODO: add `playwright` for the JS-rendered browser tool (app/tools/system/browser.py).
+
+# ---- Logging & utilities ----------------------------------------------------
+loguru~=0.7              # structured, ergonomic logging
+python-dotenv~=1.0       # .env loading fallback for tooling/scripts
+
+# ---- Testing (dev) ----------------------------------------------------------
+pytest~=8.3
+pytest-asyncio~=0.24
+pytest-mock~=3.14

@@ -1,0 +1,54 @@
+# ---------------------------------------------------------------------------
+# Secrets — NEVER commit. .env holds the real bot token and provider API keys.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Test / type-checker / coverage caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Runtime data — generated at runtime, not source. Keep the dirs, drop content.
+# ---------------------------------------------------------------------------
+data/db.sqlite3
+data/db.sqlite3-*
+data/logs/
+data/cache/
+data/uploads/
+data/sandbox/
+data/vector_store/
+*.sqlite3
+*.log
+
+# ---------------------------------------------------------------------------
+# Editor / OS / agent
+# ---------------------------------------------------------------------------
+.claude/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
