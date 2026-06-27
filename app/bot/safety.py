@@ -60,6 +60,11 @@ class ConfirmationManager:
             future: asyncio.Future[bool] = asyncio.get_running_loop().create_future()
             self._pending[token] = future
 
+            log.debug(
+                "Requesting confirmation for tool {!r} with token={} (pending={})",
+                tool.name, token, len(self._pending),
+            )
+
             keyboard = InlineKeyboardMarkup(
                 [
                     [
@@ -80,7 +85,9 @@ class ConfirmationManager:
                 return False
 
             try:
-                return await asyncio.wait_for(future, timeout=self._timeout)
+                result = await asyncio.wait_for(future, timeout=self._timeout)
+                log.debug("Confirmation for tool {!r}: approved={}", tool.name, result)
+                return result
             except asyncio.TimeoutError:
                 log.info("Confirmation for {!r} timed out; denying.", tool.name)
                 return False
@@ -103,13 +110,26 @@ class ConfirmationManager:
 
         parts = (query.data or "").split(":")
         if len(parts) != 3 or parts[0] != _PREFIX:
+            log.debug("Ignoring malformed callback data: {}", query.data)
             return
         _, token, decision = parts
         approved = decision == "allow"
 
+        log.debug(
+            "Confirmation callback: token={} decision={} approved={} pending_tokens={}",
+            token, decision, approved, list(self._pending.keys()),
+        )
+
         future = self._pending.get(token)
         if future is not None and not future.done():
             future.set_result(approved)
+            log.debug("Future resolved with approved={}", approved)
+        else:
+            log.warning(
+                "Confirmation callback for token {!r} had no matching pending future "
+                "(found={}, done={}). This may indicate a race condition or timeout.",
+                token, future is not None, future.done() if future else None,
+            )
 
         with _suppress_telegram_errors():
             await query.edit_message_text(

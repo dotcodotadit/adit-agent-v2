@@ -339,6 +339,7 @@ async def confirmation_callback(
     update: "Update", context: "ContextTypes.DEFAULT_TYPE"
 ) -> None:
     """Route a confirmation button press to the :class:`ConfirmationManager`."""
+    log.debug("Confirmation callback received: data={}", update.callback_query.data if update.callback_query else None)
     services = get_services(context)
     await services.confirm.handle_callback(update, context)
 

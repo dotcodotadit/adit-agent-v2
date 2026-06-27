@@ -196,16 +196,17 @@ class ProviderRouter:
         tool_acc: dict[int, dict[str, str]] = {}
         finish_reason = "stop"
 
-        async for event in sdk_stream:
-            if not event.choices:
-                continue
-            choice = event.choices[0]
-            delta = choice.delta
+        try:
+            async for event in sdk_stream:
+                if not event.choices:
+                    continue
+                choice = event.choices[0]
+                delta = choice.delta
 
-            text = getattr(delta, "content", None)
-            if text:
-                content_parts.append(text)
-                yield StreamChunk(type="text", text=text)
+                text = getattr(delta, "content", None)
+                if text:
+                    content_parts.append(text)
+                    yield StreamChunk(type="text", text=text)
 
             for tcd in getattr(delta, "tool_calls", None) or []:
                 slot = tool_acc.setdefault(tcd.index, {"id": "", "name": "", "args": ""})
@@ -220,6 +221,22 @@ class ProviderRouter:
 
             if choice.finish_reason:
                 finish_reason = choice.finish_reason
+
+        except Exception as exc:
+            log.warning("Stream interrupted: {}", exc)
+            # Yield whatever we have so far instead of crashing
+            if content_parts:
+                yield StreamChunk(
+                    type="done",
+                    response=LLMResponse(
+                        content="".join(content_parts) + "\n\n[Connection interrupted]",
+                        tool_calls=[],
+                        finish_reason="error",
+                        model=model,
+                    ),
+                )
+                return
+            raise ProviderError(f"Stream interrupted: {exc}") from exc
 
         tool_calls = [
             ToolCallRequest(
