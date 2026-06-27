@@ -1,15 +1,15 @@
-"""``web_search`` tool — keyless web search via the DuckDuckGo HTML endpoint.
+"""``web_search`` tool — web search via SerpAPI (Google/Bing) with DuckDuckGo fallback.
 
-Returns a ranked list of ``{title, url, snippet}`` results. It uses DuckDuckGo's
-no-API-key HTML endpoint so it works out of the box; swapping in a paid search
-API later only means changing :func:`_search_duckduckgo`.
+When a SerpAPI key is configured (``SERPAPI_API_KEY``), searches use Google via
+SerpAPI for superior results. Without a key, the tool falls back to DuckDuckGo's
+free HTML endpoint.
 
-The shared ``ctx.http_client`` (an ``httpx.AsyncClient``) is reused when
-present; otherwise a short-lived client is created and closed per call.
+Returns a ranked list of ``{title, url, snippet}`` results.
 """
 
 from __future__ import annotations
 
+import os
 from urllib.parse import parse_qs, urlparse
 
 from pydantic import BaseModel, Field
@@ -20,6 +20,9 @@ from app.tools.base import (
     ToolResult,
 )
 from app.tools.registry import tool
+from app.utils.logger import get_logger
+
+log = get_logger(__name__)
 
 _DDG_HTML_ENDPOINT = "https://html.duckduckgo.com/html/"
 _USER_AGENT = (
@@ -36,7 +39,12 @@ class WebSearchArgs(BaseModel):
         5, ge=1, le=25, description="Maximum number of results to return."
     )
     region: str = Field(
-        "wt-wt", description="DuckDuckGo region code (e.g. 'us-en', 'wt-wt')."
+        "wt-wt",
+        description="Region code. For SerpAPI: 'us', 'id', 'jp', etc. For DuckDuckGo: 'wt-wt', 'us-en'.",
+    )
+    language: str = Field(
+        "en",
+        description="Language code for results (e.g. 'en', 'id', 'zh').",
     )
 
 
@@ -44,7 +52,8 @@ class WebSearchArgs(BaseModel):
     name="web_search",
     description=(
         "Search the web and return a ranked list of results (title, URL, and "
-        "snippet). Use this to find pages, then 'web_scrape' to read one."
+        "snippet). Uses Google via SerpAPI when available, falls back to DuckDuckGo. "
+        "Use this to find pages, then 'web_scrape' to read one."
     ),
     args=WebSearchArgs,
     category="web",
@@ -63,24 +72,92 @@ async def web_search(args: WebSearchArgs, ctx: ToolContext | None) -> ToolResult
     except ImportError as exc:  # pragma: no cover - dependency guard
         raise ToolExecutionError("httpx is required for web_search.") from exc
 
+    # Check for SerpAPI key
+    serpapi_key = os.environ.get("SERPAPI_API_KEY", "").strip()
+
     client = ctx.http_client if ctx is not None else None
     own_client = client is None
     if own_client:
         client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
 
     try:
-        results = await _search_duckduckgo(client, args)
+        if serpapi_key:
+            results = await _search_serpapi(client, args, serpapi_key)
+            source = "google"
+        else:
+            results = await _search_duckduckgo(client, args)
+            source = "duckduckgo"
     except httpx.HTTPError as exc:
         raise ToolExecutionError(f"Search request failed: {exc}") from exc
     finally:
         if own_client:
             await client.aclose()
 
-    return ToolResult.ok(results, result_count=len(results), query=args.query)
+    return ToolResult.ok(
+        results,
+        result_count=len(results),
+        query=args.query,
+        source=source,
+    )
+
+
+async def _search_serpapi(
+    client, args: WebSearchArgs, api_key: str
+) -> list[dict]:
+    """Query Google via SerpAPI for high-quality results."""
+    from serpapi import GoogleSearch
+
+    params = {
+        "q": args.query,
+        "api_key": api_key,
+        "num": args.max_results,
+        "gl": args.region if args.region != "wt-wt" else "us",
+        "hl": args.language,
+    }
+
+    # Run in executor since SerpAPI client is synchronous
+    import asyncio
+
+    def _run_search():
+        search = GoogleSearch(params)
+        return search.get_dict()
+
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, _run_search)
+
+    results: list[dict] = []
+
+    # Parse organic results
+    for item in data.get("organic_results", [])[: args.max_results]:
+        results.append({
+            "title": item.get("title", ""),
+            "url": item.get("link", ""),
+            "snippet": item.get("snippet", ""),
+        })
+
+    # If no organic results, try answer box
+    if not results and "answer_box" in data:
+        box = data["answer_box"]
+        results.append({
+            "title": box.get("title", "Answer Box"),
+            "url": box.get("link", ""),
+            "snippet": box.get("answer", box.get("snippet", "")),
+        })
+
+    # Add knowledge graph if available
+    if "knowledge_graph" in data and len(results) < args.max_results:
+        kg = data["knowledge_graph"]
+        results.insert(0, {
+            "title": kg.get("title", ""),
+            "url": kg.get("source", {}).get("link", ""),
+            "snippet": kg.get("description", ""),
+        })
+
+    return results
 
 
 async def _search_duckduckgo(client, args: WebSearchArgs) -> list[dict]:
-    """Query the DuckDuckGo HTML endpoint and parse the result list."""
+    """Query the DuckDuckGo HTML endpoint and parse the result list (fallback)."""
     from bs4 import BeautifulSoup
 
     resp = await client.post(
@@ -98,7 +175,7 @@ async def _search_duckduckgo(client, args: WebSearchArgs) -> list[dict]:
         if not href or not title:
             continue
 
-        # DDG wraps targets in a redirect (…/l/?uddg=<encoded-url>): unwrap it.
+        # DDG wraps targets in a redirect (.../l/?uddg=<encoded-url>): unwrap it.
         url = _unwrap_ddg_redirect(href)
 
         snippet_el = anchor.find_parent("div", class_="result__body")

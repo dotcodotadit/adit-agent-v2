@@ -39,6 +39,7 @@ python-docx~=1.1         # DOCX parsing
 beautifulsoup4~=4.12     # HTML parsing for scraper tool
 # lxml intentionally omitted — scrapers use bs4's built-in html.parser (no C ext needed).
 # TODO: add `playwright` for the JS-rendered browser tool (app/tools/system/browser.py).
+google-search-results~=2.4  # SerpAPI client for Google/Bing search
 
 # ---- Blockchain & crypto tools ----------------------------------------------
 # web3~=6.0              # Ethereum interaction (optional - tools work without it)

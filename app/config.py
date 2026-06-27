@@ -148,6 +148,11 @@ class Settings(BaseSettings):
     # Where to store browser screenshots (auto-created if absent).
     browser_screenshot_dir: Path = PROJECT_ROOT / "data" / "cache" / "screenshots"
 
+    # ---- Search API (SerpAPI) ------------------------------------------------
+    # Optional: enables Google/Bing search via SerpAPI. Falls back to DuckDuckGo.
+    # Get your key at: https://serpapi.com/manage-api-key
+    serpapi_api_key: str = ""
+
     # ---- Inbound rate limiting (per user) ------------------------------------
     # Throttles how many messages a single user may send within a rolling
     # window, protecting the bot (and your LLM credits) from floods/abuse.
