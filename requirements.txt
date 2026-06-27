@@ -7,7 +7,7 @@
 
 # ---- Telegram bot framework -------------------------------------------------
 # v20.x is fully async (asyncio) and ships with rate-limiter + job-queue extras.
-python-telegram-bot>=22.0
+python-telegram-bot[rate-limiter]>=22.0
 
 # ---- Configuration & validation ---------------------------------------------
 pydantic~=2.9            # v2 core (Rust-backed validation)

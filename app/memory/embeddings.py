@@ -56,5 +56,5 @@ class EmbeddingService:
         try:
             return await self._provider.embed(texts, model=self._model)
         except Exception as exc:  # noqa: BLE001 - embeddings are best-effort
-            log.warning("Embedding request failed: {}", exc)
+            log.debug("Embedding unavailable (provider may not support /embeddings): {}", exc)
             return None

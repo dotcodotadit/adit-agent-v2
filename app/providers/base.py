@@ -257,7 +257,7 @@ class ProviderRouter:
                 return [item.embedding for item in resp.data]
             except Exception as exc:  # noqa: BLE001
                 last_err = exc
-                log.warning("Provider {!r} failed on embed(): {}", provider.name, exc)
+                log.debug("Provider {!r} does not support embed(): {}", provider.name, exc)
         raise ProviderError(f"All providers failed on embed(): {last_err}") from last_err
 
     # ------------------------------------------------------------------ #

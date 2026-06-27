@@ -99,7 +99,7 @@ class Settings(BaseSettings):
 
     # ---- LLM core ------------------------------------------------------------
     llm_provider_priority: list[str] = Field(
-        default_factory=lambda: ["freemodel", "aerolink", "zerog", "zyloo"]
+        default_factory=lambda: ["nara", "freemodel", "aerolink", "zerog", "zyloo"]
     )
     llm_default_model: str = "gpt-4o-mini"
     llm_request_timeout: int = 60
@@ -107,6 +107,8 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
 
     # ---- Per-provider credentials (flat env vars) ----------------------------
+    nara_api_key: SecretStr = SecretStr("")
+    nara_base_url: str = ""
     freemodel_api_key: SecretStr = SecretStr("")
     freemodel_base_url: str = ""
     aerolink_api_key: SecretStr = SecretStr("")
@@ -235,6 +237,7 @@ class Settings(BaseSettings):
         """
         key = name.lower()
         mapping = {
+            "nara": (self.nara_api_key, self.nara_base_url),
             "freemodel": (self.freemodel_api_key, self.freemodel_base_url),
             "aerolink": (self.aerolink_api_key, self.aerolink_base_url),
             "zerog": (self.zerog_api_key, self.zerog_base_url),
