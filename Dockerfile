@@ -32,9 +32,8 @@ RUN python -m venv "$VIRTUAL_ENV"
 WORKDIR /app
 COPY requirements.txt .
 
-# Use BuildKit cache mount to speed up repeat builds.
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
+# Install Python dependencies.
+RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
 # ----------------------------------------------------------------------------
@@ -65,7 +64,6 @@ COPY --chown=adit:adit . .
 
 # Persisted state (db, uploads, vector store, logs) lives here.
 RUN mkdir -p /app/data && chown -R adit:adit /app/data
-VOLUME ["/app/data"]
 
 USER adit
 
