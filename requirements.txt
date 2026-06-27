@@ -40,6 +40,11 @@ beautifulsoup4~=4.12     # HTML parsing for scraper tool
 # lxml intentionally omitted — scrapers use bs4's built-in html.parser (no C ext needed).
 # TODO: add `playwright` for the JS-rendered browser tool (app/tools/system/browser.py).
 
+# ---- Blockchain & crypto tools ----------------------------------------------
+# web3~=6.0              # Ethereum interaction (optional - tools work without it)
+# eth-abi~=5.0           # ABI encoding/decoding
+pycryptodome~=3.20      # Cryptographic functions (Keccak, etc.)
+
 # ---- Logging & utilities ----------------------------------------------------
 loguru~=0.7              # structured, ergonomic logging
 python-dotenv~=1.0       # .env loading fallback for tooling/scripts
